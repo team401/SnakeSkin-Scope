@@ -1,0 +1,15 @@
+plugins {
+    id "application"
+    id "org.openjfx.javafxplugin" version "0.0.8"
+}
+
+dependencies {
+    implementation project(":Protocol")
+}
+
+javafx {
+    version = "11.0.2"
+    modules = [ 'javafx.controls', 'javafx.fxml' ]
+}
+
+mainClassName = "org.snakeskin.scope.client.ScopeClient"
