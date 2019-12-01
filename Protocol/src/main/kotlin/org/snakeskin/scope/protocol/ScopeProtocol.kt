@@ -47,7 +47,7 @@ class ScopeProtocol(val channels: List<ScopeChannel>) {
 
     init {
         //Calculate offsets
-        var currentOffset = 0
+        var currentOffset = 8 //Start at 8, since we include the timestamp as the first 8 bytes
         channels.forEachIndexed { index, scopeChannel ->
             offsets[index] = currentOffset
             currentOffset += scopeChannel.type.dataSizeBytes //Increment offset by data size
@@ -57,15 +57,16 @@ class ScopeProtocol(val channels: List<ScopeChannel>) {
     /**
      * The size of this protocol in bytes.
      */
-    val sizeBytes = channels.sumBy { it.type.dataSizeBytes }
+    val sizeBytes = channels.sumBy { it.type.dataSizeBytes } + 8 //8 bytes for the timestamp
 
     /**
      * Fills a byte buffer with the current value of each channel.
      * This function should be called on the server side to populate the transmission buffer
      * with new data from the scope.
      */
-    fun populateBuffer(buffer: ByteBuffer) {
+    fun populateBuffer(timestamp: Double, buffer: ByteBuffer) {
         check (buffer.capacity() >= sizeBytes) //Ensure there's enough room in the buffer for our data
+        buffer.putDouble(0, timestamp) //Write the timestamp to the first slot in the buffer
         channels.forEachIndexed { index, scopeChannel ->
             val offset = offsets[index] //Grab the byte offset for this channel
             when (scopeChannel) {
@@ -85,8 +86,11 @@ class ScopeProtocol(val channels: List<ScopeChannel>) {
      * Updates the scope channels with the values from the byte buffer.
      * This function should be called on the client side to populate the channel objects
      * with new data from the buffer.
+     *
+     * @return The timestamp of this data
      */
-    fun populateChannels(buffer: ByteBuffer) {
+    fun populateChannels(buffer: ByteBuffer): Double {
+        val timestamp = buffer.getDouble(0)
         channels.forEachIndexed { index, scopeChannel ->
             val offset = offsets[index]
             when (scopeChannel) {
@@ -102,5 +106,6 @@ class ScopeProtocol(val channels: List<ScopeChannel>) {
                 }
             }
         }
+        return timestamp
     }
 }
