@@ -108,4 +108,17 @@ class ScopeProtocol(val channels: List<ScopeChannel>) {
         }
         return timestamp
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is ScopeProtocol) return false
+
+        if (channels != other.channels) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return channels.hashCode()
+    }
 }

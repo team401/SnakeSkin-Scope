@@ -1,6 +1,7 @@
 package org.snakeskin.scope.server
 
 import org.snakeskin.scope.protocol.ScopeProtocol
+import org.snakeskin.scope.protocol.channel.ScopeChannelBoolean
 import org.snakeskin.scope.protocol.channel.ScopeChannelNumeric
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
@@ -57,10 +58,9 @@ abstract class ScopeServer(val timesource: IScopeTimeSource, val dataServerPort:
         val now = timesource.getTimeNow() //Get the current time
         updateChannels() //Update all channel values //TODO maybe optimize so this directly writes to the buffer?
         protocol.populateBuffer(now, writeBuffer) //Fill the write buffer with the data
-        writeBuffer.rewind()
         val clients = headerServer.getClients()
-        println(clients)
         clients.forEach {
+            writeBuffer.rewind()
             datagramChannel.send(writeBuffer, it.dataSocketAddress) //Send the buffer to the client
         }
     }
@@ -75,16 +75,23 @@ fun main() {
 
     val server = object : ScopeServer(ts) {
         lateinit var channel1: ScopeChannelNumeric
-        lateinit var channel2: ScopeChannelNumeric
+        lateinit var channel2: ScopeChannelBoolean
+
+
+        var lastDouble = 0.0
+        var lastBool = false
 
         override fun registerChannels(reg: ScopeRegistrationContext) {
             channel1 = reg.registerNumeric("Test Channel 1")
-            channel2 = reg.registerNumeric("Test Channel 2")
+            channel2 = reg.registerBoolean("Test Channel 2")
         }
 
         override fun updateChannels() {
-            channel1.update(Math.random())
-            channel2.update(Math.random())
+            channel1.update(lastDouble)
+            channel2.update(lastBool)
+
+            lastDouble += 1.0
+            lastBool = !lastBool
         }
     }
 
@@ -92,6 +99,6 @@ fun main() {
 
     while (true) {
         server.run()
-        Thread.sleep(100)
+        Thread.sleep(10)
     }
 }

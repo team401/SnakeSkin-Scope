@@ -1,6 +1,7 @@
 package org.snakeskin.scope.client
 
 import org.snakeskin.scope.protocol.ScopeProtocol
+import org.snakeskin.scope.protocol.channel.ScopeChannelBoolean
 import org.snakeskin.scope.protocol.channel.ScopeChannelNumeric
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -17,6 +18,10 @@ fun main() {
 
     println(header)
     val protocol = ScopeProtocol.deserializeProtocol(header)
+    val protocol2 = ScopeProtocol.deserializeProtocol(header)
+
+    println("Protocol equal: ${protocol == protocol2}")
+
     val buffer = ByteBuffer.allocate(protocol.sizeBytes)
 
     Thread {
@@ -30,6 +35,8 @@ fun main() {
         buffer.rewind()
         dgam.receive(buffer)
         protocol.populateChannels(buffer)
-        println((protocol.channels[0] as ScopeChannelNumeric).currentValue)
+        val channel1 = protocol.channels[0] as ScopeChannelNumeric
+        val channel2 = protocol.channels[1] as ScopeChannelBoolean
+        println("${channel1.currentValue} - ${channel2.currentValue}")
     }
 }

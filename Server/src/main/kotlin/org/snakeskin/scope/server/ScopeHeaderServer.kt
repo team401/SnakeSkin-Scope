@@ -1,9 +1,11 @@
 package org.snakeskin.scope.server
 
 import org.snakeskin.scope.protocol.ScopeProtocol
+import java.lang.Exception
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
+import java.net.SocketException
 import java.util.concurrent.CopyOnWriteArrayList
 
 class ScopeHeaderServer(port: Int, val dataPort: Int, protocol: ScopeProtocol, val readTimeoutMs: Int) {
@@ -37,7 +39,7 @@ class ScopeHeaderServer(port: Int, val dataPort: Int, protocol: ScopeProtocol, v
         }
     }
 
-    inner class ServerClientTask(clientSocket: Socket): Runnable {
+    inner class ServerClientTask(val clientSocket: Socket): Runnable {
         private val thread = Thread(this)
         val address = clientSocket.inetAddress
         val dataSocketAddress = InetSocketAddress(address, dataPort)
@@ -52,7 +54,11 @@ class ScopeHeaderServer(port: Int, val dataPort: Int, protocol: ScopeProtocol, v
 
         fun stop() {
             clients.remove(this) //Remove ourselves from the client list
-            thread.interrupt() //Stop the thread
+            if (!thread.isInterrupted) {
+                thread.interrupt() //Interrupt the thread (if it's not already)
+            }
+            //Close the socket
+            clientSocket.close()
         }
 
         override fun run() {
@@ -61,11 +67,15 @@ class ScopeHeaderServer(port: Int, val dataPort: Int, protocol: ScopeProtocol, v
             while (!Thread.interrupted()) {
                 try {
                     val read = input.read()
-                    if (read == -1) stop() //Connection lost
+                    if (read == -1) break //Connection lost
                 } catch (e: InterruptedException) {
-                    stop()
+                    break
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    break
                 }
             }
+            stop()
         }
 
         override fun toString(): String {
