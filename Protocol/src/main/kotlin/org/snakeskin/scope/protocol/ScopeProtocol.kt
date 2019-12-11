@@ -9,13 +9,16 @@ import java.nio.ByteBuffer
  *
  * Channels are referenced by index, not by name.  The order of the input channel list matters.
  */
-class ScopeProtocol(val channels: List<ScopeChannel>) {
+class ScopeProtocol(val dataPort: Int, val channels: List<ScopeChannel>) {
     companion object {
         /**
          * Deserializes a header into a protocol object
          */
         fun deserializeProtocol(header: String): ScopeProtocol {
-            val channelHeaders = header.split(';')
+            val portSplit = header.split(';', limit = 2)
+            val port = portSplit[0].toInt()
+            val channelHeader = portSplit[1]
+            val channelHeaders = channelHeader.split(';')
             val channelList = arrayListOf<ScopeChannel>()
             channelHeaders.forEach  {
                 val split = it.split(':')
@@ -28,8 +31,12 @@ class ScopeProtocol(val channels: List<ScopeChannel>) {
                 }
                 channelList.add(channel)
             }
-            return ScopeProtocol(channelList)
+            return ScopeProtocol(port, channelList)
         }
+
+        //Timing constants
+        const val HEADER_REQ_TIMEOUT_MS = 5 * 1000 //5 seconds to request header
+        const val HEARTBEAT_TIMEOUT_MS = 10 * 1000 //10 seconds before timing out a client due to bad heartbeat
     }
 
     /**
@@ -37,7 +44,7 @@ class ScopeProtocol(val channels: List<ScopeChannel>) {
      * where it can be reconstructed into a protocol object to keep the ends in sync.
      */
     fun serializeProtocol(): String {
-        return channels.joinToString(";") { "${it.name}:${it.type.ordinal}" } //Simple serialization of the channel data
+        return "$dataPort;" + channels.joinToString(";") { "${it.name}:${it.type.ordinal}" } //Simple serialization of the channel data
     }
 
     /**

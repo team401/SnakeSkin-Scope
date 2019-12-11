@@ -1,6 +1,7 @@
 package org.snakeskin.scope.server
 
 import org.snakeskin.scope.protocol.ScopeProtocol
+import org.snakeskin.scope.protocol.ScopeProtocolCommands
 import java.lang.Exception
 import java.net.InetSocketAddress
 import java.net.ServerSocket
@@ -8,7 +9,7 @@ import java.net.Socket
 import java.net.SocketException
 import java.util.concurrent.CopyOnWriteArrayList
 
-class ScopeHeaderServer(port: Int, val dataPort: Int, protocol: ScopeProtocol, val readTimeoutMs: Int) {
+class ScopeHeaderServer(port: Int, val dataPort: Int, protocol: ScopeProtocol) {
     private val header = (protocol.serializeProtocol() + "\n").toByteArray() //Pre-generate the protocol header
     private val serverSocket = ServerSocket(port)
 
@@ -24,7 +25,7 @@ class ScopeHeaderServer(port: Int, val dataPort: Int, protocol: ScopeProtocol, v
             while (!Thread.interrupted()) {
                 try {
                     val clientSocket = serverSocket.accept() //Accept a new connection
-                    clientSocket.soTimeout = readTimeoutMs
+                    clientSocket.soTimeout = ScopeProtocol.HEARTBEAT_TIMEOUT_MS
                     val clientTask = ServerClientTask(clientSocket)
                     clients.forEach {
                         if (it.address == clientSocket.inetAddress) {
@@ -62,12 +63,15 @@ class ScopeHeaderServer(port: Int, val dataPort: Int, protocol: ScopeProtocol, v
         }
 
         override fun run() {
-            //Once we know we're connected, send the header to the client once
-            output.write(header)
             while (!Thread.interrupted()) {
                 try {
                     val read = input.read()
-                    if (read == -1) break //Connection lost
+                    if (read == -1) break //If we read a -1, the connection is lost, so drop the client
+                    val cmd = ScopeProtocolCommands.getCommand(read)
+
+                    if (cmd == ScopeProtocolCommands.HeaderRequest) {
+                        output.write(header) //Write the header if the client requested it
+                    }
                 } catch (e: InterruptedException) {
                     break
                 } catch (e: Exception) {

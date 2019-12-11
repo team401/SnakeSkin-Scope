@@ -23,12 +23,49 @@ import javafx.stage.Stage
 import javafx.util.Duration
 import java.text.DecimalFormat
 
+fun drawDot(ctx: GraphicsContext, x: Double, y: Double, radius: Double) {
+    ctx.fillOval(x - radius, y - radius, radius * 2.0, radius * 2.0)
+}
+
+fun drawGraphPoint(ctx: GraphicsContext, padding: Double, xMin: Double, yMin: Double, xMax: Double, yMax: Double, width: Double, height: Double, xCoord: Double, yCoord: Double, radius: Double) {
+    //Convert coordinates into percentage of distance into each axis
+    val xPercent = xCoord / (xMax - xMin)
+    val yPercent = 1.0 - (yCoord / (yMax - yMin) + .5)
+
+    //Get pixel locations for each coordinate
+    val xPixels = padding + width * xPercent
+    val yPixels = padding + height * yPercent
+
+    //Plot the point
+    drawDot(ctx, xPixels, yPixels, radius)
+}
+
+fun drawGraphLine(ctx: GraphicsContext, padding: Double, xMin: Double, yMin: Double, xMax: Double, yMax: Double, width: Double, height: Double, xCoordStart: Double, yCoordStart: Double, xCoordEnd: Double, yCoordEnd: Double) {
+    //Convert coordinates into percentage of distance into each axis
+    val xStartPercent = xCoordStart / (xMax - xMin)
+    val yStartPercent = 1.0 - (yCoordStart / (yMax - yMin) + .5)
+
+    val xEndPercent = xCoordEnd / (xMax - xMin)
+    val yEndPercent = 1.0 - (yCoordEnd / (yMax - yMin) + .5)
+
+
+    //Get pixel locations for each coordinate
+    val xStartPixels = padding + width * xStartPercent
+    val yStartPixels = padding + height * yStartPercent
+
+    val xEndPixels = padding + width * xEndPercent
+    val yEndPixels = padding + height * yEndPercent
+
+    //Plot the point
+    ctx.strokeLine(xStartPixels, yStartPixels, xEndPixels, yEndPixels)
+}
+
 fun drawDotLineVertical(ctx: GraphicsContext, xPos: Double, yStart: Double, yHeight: Double, numDots: Double, dotRadius: Double) {
     val dotSpacing = yHeight / numDots
 
     var currentPos = yStart
     while (currentPos <= yStart + yHeight) {
-        ctx.fillOval(xPos - dotRadius, currentPos - dotRadius, dotRadius * 2.0, dotRadius * 2.0)
+        drawDot(ctx, xPos, currentPos, dotRadius)
         currentPos += dotSpacing
     }
 }
@@ -38,7 +75,7 @@ fun drawDotLineHorizontal(ctx: GraphicsContext, yPos: Double, xStart: Double, xW
 
     var currentPos = xStart
     while (currentPos <= xStart + xWidth) {
-        ctx.fillOval(currentPos - dotRadius, yPos - dotRadius, dotRadius * 2.0, dotRadius * 2.0)
+        drawDot(ctx, currentPos, yPos, dotRadius)
         currentPos += dotSpacing
     }
 }
@@ -113,6 +150,7 @@ class ScopeClient: Application() {
         fg.textBaseline = VPos.TOP
         fg.fill = Color.YELLOW
         fg.font = Font.font(24.0)
+        fg.stroke = Color.YELLOW
 
         val timer = object : AnimationTimer() {
             override fun handle(now: Long) {
@@ -120,10 +158,29 @@ class ScopeClient: Application() {
                 val fps = 1000.0 / ((now - lastTime) * 1e-6)
                 val truncated = fmt.format(fps).toString()
                 fg.fillText(truncated, 0.0, 0.0)
+
+                var tNow = 0.0
+                var tLast = 0.0
+                var yLast = Math.random()
+                drawGraphPoint(fg, padding, 0.0, -1.0, 1.0, 1.0, width, height, tNow, yLast, 2.0)
+                tNow = 0.001
+
+                while (tNow <= .9) {
+                    //Draw next point
+                    val y = Math.sin(tNow * 10 + Math.random() / 10.0) * Math.cos(tNow * 10.0)
+                    //drawGraphPoint(fg, padding, 0.0, -1.0, 1.0, 1.0, width, height, tNow, y, 2.0)
+                    //Draw line to last point
+                    drawGraphLine(fg, padding, 0.0, -1.0, 1.0, 1.0, width, height, tLast, yLast, tNow, y)
+                    yLast = y
+                    tLast = tNow
+                    tNow += 0.001
+                }
+
                 lastTime = now
             }
         }
         timer.start()
+
 
         stage.scene = scene
         stage.show()
