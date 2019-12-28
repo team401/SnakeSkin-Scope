@@ -1,27 +1,15 @@
 package org.snakeskin.scope.client
 
-import javafx.animation.AnimationTimer
-import javafx.animation.KeyFrame
-import javafx.animation.Timeline
 import javafx.application.Application
-import javafx.event.EventHandler
+import javafx.beans.InvalidationListener
 import javafx.geometry.Insets
-import javafx.geometry.VPos
 import javafx.scene.Scene
-import javafx.scene.canvas.Canvas
 import javafx.scene.canvas.GraphicsContext
-import javafx.scene.control.Label
-import javafx.scene.layout.Background
-import javafx.scene.layout.BackgroundFill
-import javafx.scene.layout.CornerRadii
-import javafx.scene.layout.StackPane
+import javafx.scene.layout.*
 import javafx.scene.paint.Color
-import javafx.scene.paint.Paint
-import javafx.scene.text.Font
-import javafx.scene.text.TextAlignment
 import javafx.stage.Stage
-import javafx.util.Duration
-import java.text.DecimalFormat
+import org.snakeskin.scope.client.plot.NumericPlot
+import org.snakeskin.scope.client.plot.PlotManager
 
 fun drawDot(ctx: GraphicsContext, x: Double, y: Double, radius: Double) {
     ctx.fillOval(x - radius, y - radius, radius * 2.0, radius * 2.0)
@@ -82,12 +70,96 @@ fun drawDotLineHorizontal(ctx: GraphicsContext, yPos: Double, xStart: Double, xW
 
 class ScopeClient: Application() {
     override fun start(stage: Stage) {
+        //PlotManager.root.setMinSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE)
+
+        val rootAnchor = AnchorPane()
+        val vbox = VBox()
+        val hbox = HBox()
+        vbox.background = Background(BackgroundFill(Color.YELLOW, CornerRadii.EMPTY, Insets.EMPTY))
+
+        AnchorPane.setTopAnchor(vbox, 0.0)
+        AnchorPane.setBottomAnchor(vbox, 0.0)
+        AnchorPane.setLeftAnchor(vbox, 0.0)
+        AnchorPane.setRightAnchor(vbox, 0.0)
+
+        rootAnchor.children.add(vbox)
+        vbox.children.add(hbox)
+
+        PlotManager.root.setMinSize(640.0, 480.0)
+        PlotManager.root.background = Background(BackgroundFill(Color.BLACK, CornerRadii.EMPTY, Insets.EMPTY))
+
+        hbox.children.add(PlotManager.root)
+
+        PlotManager.start()
+        PlotManager.addPlot(NumericPlot())
+        val scene = Scene(rootAnchor)
+        stage.scene = scene
+
+        val listener = InvalidationListener {
+            val width = stage.width
+            val height = stage.height
+            if (!width.isNaN() && !height.isNaN()) {
+                //Resize the root
+                val targetWidth = width - 200.0
+                val targetHeight = height - 100.0
+
+                PlotManager.resizeRoot(targetWidth, targetHeight)
+            }
+        }
+
+        stage.widthProperty().addListener(listener)
+        stage.heightProperty().addListener(listener)
+
+        stage.minWidth = 640.0 + 200.0
+        stage.minHeight = 480.0 + 100.0
+
+        stage.width = stage.minWidth
+        stage.height = stage.minHeight
+
+        stage.show()
+
+        /*
+
+        for (i in 0 until 1) {
+            PlotManager.addPlot(NumericPlot())
+        }
+
+        val scene = Scene(PlotManager.root)
+
+        stage.scene = scene
+        stage.widthProperty().addListener(InvalidationListener {
+            if (!stage.height.isNaN() && !stage.width.isNaN())
+            PlotManager.resizeRoot(stage.width, stage.height)
+        })
+
+        stage.heightProperty().addListener(InvalidationListener {
+            if (!stage.height.isNaN() && !stage.width.isNaN())
+                PlotManager.resizeRoot(stage.width, stage.height)
+        })
+
+
+
+        stage.show()
+
+         */
+
+        /*
         val windowWidth = 640.0
         val windowHeight = 480.0
         val c1 = Canvas(windowWidth, windowHeight)
         val c2 = Canvas(windowWidth, windowHeight)
-        val stack = StackPane(c1, c2)
-        stack.background = Background(BackgroundFill(Color.BLACK, CornerRadii.EMPTY, Insets.EMPTY))
+        val button = Button("asdf")
+        val button2 = Button("jkl;")
+
+        StackPane.setAlignment(button, Pos.TOP_LEFT)
+        StackPane.setAlignment(button2, Pos.TOP_LEFT)
+        button.translateX = 100.0
+        button2.translateX = 110.0
+
+        c1.translateX = 120.0
+
+        val stack = StackPane(c1, c2, button, button2)
+        //stack.background = Background(BackgroundFill(Color.BLACK, CornerRadii.EMPTY, Insets.EMPTY))
         val scene = Scene(stack, windowWidth, windowHeight)
         val bg = c1.graphicsContext2D
         val fg = c2.graphicsContext2D
@@ -98,6 +170,8 @@ class ScopeClient: Application() {
         val height = c1.height - 2 * padding
         val lineSpacing = width / 10.0 //20 divisions
 
+        bg.fill = Color.BLACK
+        bg.fillRect(0.0, 0.0, windowWidth, windowHeight)
 
         bg.stroke = Color.WHITE
         bg.strokeRect(padding, padding, width, height)
@@ -150,7 +224,7 @@ class ScopeClient: Application() {
         fg.textBaseline = VPos.TOP
         fg.fill = Color.YELLOW
         fg.font = Font.font(24.0)
-        fg.stroke = Color.YELLOW
+        fg.stroke =  Color.CYAN
 
         val timer = object : AnimationTimer() {
             override fun handle(now: Long) {
@@ -167,7 +241,7 @@ class ScopeClient: Application() {
 
                 while (tNow <= .9) {
                     //Draw next point
-                    val y = Math.sin(tNow * 10 + Math.random() / 10.0) * Math.cos(tNow * 10.0)
+                    val y = Math.sin(tNow * 20.0) / 5.0 + Math.random() / 10.0 - Math.random() / 10.0
                     //drawGraphPoint(fg, padding, 0.0, -1.0, 1.0, 1.0, width, height, tNow, y, 2.0)
                     //Draw line to last point
                     drawGraphLine(fg, padding, 0.0, -1.0, 1.0, 1.0, width, height, tLast, yLast, tNow, y)
@@ -181,9 +255,36 @@ class ScopeClient: Application() {
         }
         timer.start()
 
+        val executor = Executors.newSingleThreadScheduledExecutor()
+
+        executor.schedule({
+            Platform.runLater {
+                try {
+                    val drawBuffer =
+                        BufferedImage(windowWidth.toInt(), windowHeight.toInt(), BufferedImage.TYPE_INT_ARGB)
+
+                    val bgRender = SwingFXUtils.fromFXImage(c1.snapshot(SnapshotParameters(), null), null)
+                    val fgRender = SwingFXUtils.fromFXImage(c2.snapshot(object : SnapshotParameters() {
+                        override fun getFill() = Color.TRANSPARENT
+                    }, null), null)
+
+                    val g = drawBuffer.graphics
+
+                    g.drawImage(bgRender, 0, 0, null)
+                    g.drawImage(fgRender, 0, 0, null)
+
+                    ImageIO.getWriterFormatNames().forEach {println(it)}
+                    ImageIO.write(drawBuffer, "png", File("C:/Users/cameronearle/Desktop/test3.png"))
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }, 5L, TimeUnit.SECONDS)
 
         stage.scene = scene
         stage.show()
+
+         */
     }
 
     companion object {
