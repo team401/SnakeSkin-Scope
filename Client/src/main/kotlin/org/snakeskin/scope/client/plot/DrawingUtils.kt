@@ -11,6 +11,8 @@ import java.text.DecimalFormat
  * Utilities for drawing on a canvas
  */
 object DrawingUtils {
+    val timmebaseNumberFormatter = DecimalFormat("#0.000")
+
     //Fix 3 decimal places, allow up to 12 decimal places
     val axisNumberFormatter = DecimalFormat("#0.000") //Number formatter for formatting all axis numbers
 
@@ -111,7 +113,7 @@ object DrawingUtils {
         ctx.textBaseline = VPos.CENTER
         ctx.translate(xOffset - 75.0, height / 2.0)
         ctx.rotate(-90.0)
-        ctx.fillText("Bus Voltage (Volts)", 0.0, 0.0)
+        ctx.fillText("VERY IMPORTANT DATA", 0.0, 0.0)
 
         ctx.restore() //Restore to remove rotation
     }

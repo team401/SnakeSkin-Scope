@@ -4,11 +4,11 @@ import javafx.animation.AnimationTimer
 import javafx.collections.FXCollections
 import javafx.collections.ListChangeListener
 import javafx.collections.ObservableList
+import javafx.geometry.Insets
 import javafx.geometry.Pos
 import javafx.scene.canvas.Canvas
-import javafx.scene.layout.GridPane
-import javafx.scene.layout.Pane
-import javafx.scene.layout.StackPane
+import javafx.scene.layout.*
+import javafx.scene.paint.Color
 import org.snakeskin.scope.client.DRAW_LOCK
 import org.snakeskin.scope.client.DrawingContext
 import org.snakeskin.scope.client.ScopeFrontend
@@ -22,7 +22,7 @@ object PlotManager: AnimationTimer() {
         val leftGutterPixels = 100.0 //Size of the left gutter, where vertical axis labels are drawn
         val rightPlotGutterPixels = 10.0 //Size of the gutter between the last timebase division and the end of the plot
         val rightPaddingPixels = 30.0 //Amount of padding between the end of the plot and the end of the canvas
-        val bottomGutterPixels = 100.0 //Amount of gutter between the bottom padding and the end of the canvas
+        val bottomGutterPixels = 75.0 //Amount of gutter between the bottom padding and the end of the canvas
 
         val topPlotPaddingPixels = 10.0 //Amount of space to add above each plot
     }
@@ -33,13 +33,23 @@ object PlotManager: AnimationTimer() {
     val plots: ObservableList<IScopePlot> = FXCollections.observableArrayList<IScopePlot>()
     val root = StackPane()
 
+    private val ctx = DrawingContext()
+
     private var needsRelocate = false //Flag for if relocation is required
     private var needsResize = false //Flag for if resizing is required
 
     private var resizeWidth = 0.0
     private var resizeHeight = 0.0
 
-    private val timebaseCanvas = Canvas() //Canvas for drawing the canvas
+    private val timebaseCanvas = TimebaseCanvas() //Canvas for drawing the canvas
+
+    private var lastNumTimebaseDivisions = 0 //Used to decide whether to relocate when the number of divisions changes
+
+    init {
+        root.background = Background(BackgroundFill(Color.BLACK, CornerRadii.EMPTY, Insets.EMPTY))
+        StackPane.setAlignment(timebaseCanvas, Pos.TOP_LEFT)
+        root.children.add(timebaseCanvas)
+    }
 
     /**
      * Adds a new plot.  Call this method from the FX thread
@@ -91,12 +101,22 @@ object PlotManager: AnimationTimer() {
             val plotY = (i * heightPerPlot) + SizingParameters.topPlotPaddingPixels //Calculate y coordinate for each plot
             plots[i].clearBackground() //Clear each plot
             plots[i].clearForeground()
-            plots[i].drawBackground(0.0, plotOriginX, plotY, usableWidth, heightPerPlot - SizingParameters.topPlotPaddingPixels, 9)
+            plots[i].drawBackground(
+                0.0,
+                plotOriginX,
+                plotY,
+                usableWidth,
+                heightPerPlot - SizingParameters.topPlotPaddingPixels,
+                ctx.numTimebaseDivisions
+            )
         }
 
         //Relocate the timebase
         val timebaseOriginY = viewportHeight - SizingParameters.bottomGutterPixels
+        val timebaseHeight = SizingParameters.bottomGutterPixels
 
+        timebaseCanvas.clear()
+        timebaseCanvas.relocateRedraw(timebaseOriginY, viewportWidth, timebaseHeight, plotOriginX, usableWidth)
     }
 
     /**
@@ -104,6 +124,13 @@ object PlotManager: AnimationTimer() {
      */
     override fun handle(now: Long) {
         DRAW_LOCK.lock() //Acquire the draw lock
+        ScopeFrontend.updateDraw(ctx)
+
+        if (ctx.numTimebaseDivisions != lastNumTimebaseDivisions) {
+            lastNumTimebaseDivisions = ctx.numTimebaseDivisions
+            needsRelocate = true
+        }
+
         if (needsResize) {
             root.minWidth = resizeWidth
             root.minHeight = resizeHeight
@@ -116,11 +143,14 @@ object PlotManager: AnimationTimer() {
             relocatePlots() //Relocate plots if we have to.  This guarantees that the operation is done in the FX thread
             needsRelocate = false
         }
-        //ScopeFrontend.updateDraw(ctx) //Get values from the frontend
+
+        //Update timebase
+        timebaseCanvas.redraw(ctx)
 
         //Render each plot
         plots.forEach {
-            //it.render(ctx)
+            it.clearForeground()
+            it.render(ctx)
         }
 
         DRAW_LOCK.unlock() //Release the draw lock

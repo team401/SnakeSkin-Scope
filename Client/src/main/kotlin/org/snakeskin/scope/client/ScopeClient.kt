@@ -10,6 +10,10 @@ import javafx.scene.paint.Color
 import javafx.stage.Stage
 import org.snakeskin.scope.client.plot.NumericPlot
 import org.snakeskin.scope.client.plot.PlotManager
+import org.snakeskin.scope.protocol.ScopeProtocol
+import org.snakeskin.scope.protocol.channel.ScopeChannelBoolean
+import org.snakeskin.scope.protocol.channel.ScopeChannelNumeric
+import kotlin.math.sin
 
 fun drawDot(ctx: GraphicsContext, x: Double, y: Double, radius: Double) {
     ctx.fillOval(x - radius, y - radius, radius * 2.0, radius * 2.0)
@@ -86,12 +90,13 @@ class ScopeClient: Application() {
         vbox.children.add(hbox)
 
         PlotManager.root.setMinSize(640.0, 480.0)
-        PlotManager.root.background = Background(BackgroundFill(Color.BLACK, CornerRadii.EMPTY, Insets.EMPTY))
 
         hbox.children.add(PlotManager.root)
 
         PlotManager.start()
         PlotManager.addPlot(NumericPlot())
+
+
         val scene = Scene(rootAnchor)
         stage.scene = scene
 
@@ -115,6 +120,25 @@ class ScopeClient: Application() {
 
         stage.width = stage.minWidth
         stage.height = stage.minHeight
+
+        val channel = ScopeChannelNumeric("Test")
+        val boolChannel = ScopeChannelBoolean("Test 2")
+        val protoLocal = ScopeProtocol(5800, listOf(channel, boolChannel))
+
+        ScopeFrontend.acceptProtocol(ScopeProtocol.deserializeProtocol(protoLocal.serializeProtocol()))
+
+        var count = 0.0
+
+        Thread {
+            while (true) {
+                channel.update(Math.rint(Math.random()))
+                boolChannel.update(Math.random() > 0.1)
+                protoLocal.populateBuffer(count, ScopeFrontend.incomingBuffer)
+                ScopeFrontend.acceptData()
+                count += .01
+                Thread.sleep(10)
+            }
+        }.start()
 
         stage.show()
 

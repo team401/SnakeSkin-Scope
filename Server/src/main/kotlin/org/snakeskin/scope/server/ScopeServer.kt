@@ -83,7 +83,6 @@ fun main() {
         }
     }
 
-    server.init()
 
     while (true) {
         server.run()

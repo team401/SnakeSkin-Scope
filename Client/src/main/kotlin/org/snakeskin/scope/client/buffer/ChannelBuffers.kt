@@ -40,7 +40,7 @@ class NumericChannelBuffer(override val size: Int, val channel: ScopeChannelNume
 }
 
 class BooleanChannelBuffer(override val size: Int, val channel: ScopeChannelBoolean): ChannelBuffer() {
-    private val arr = BooleanArray(size)
+    val arr = BooleanArray(size)
 
     override fun reset() {
         arr.fill(false)

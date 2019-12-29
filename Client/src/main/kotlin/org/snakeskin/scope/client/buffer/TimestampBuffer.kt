@@ -25,7 +25,7 @@ class TimestampBuffer(val size: Int) {
 
     /**
      * Returns the index of the first timestamp *less than* the value of the provided timestamp.
-     * If there is no timestamp lower than the value, -1 is returned
+     * If there is no timestamp lower than the value, 0 is returned
      *
      * @param timestamp The timestamp to search for
      * @param startIndex The index to start searching at
@@ -35,6 +35,6 @@ class TimestampBuffer(val size: Int) {
             //Epsilon less than operation to avoid roundoff errors (1e-6 is well above our specified maximum precision of 1 ms)
             if ((timestamp - arr[i]) > 1e-6) return i
         }
-        return -1 //Return -1 if no value was found
+        return 0 //Return 0 if no value was found
     }
 }

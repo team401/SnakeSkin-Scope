@@ -1,7 +1,11 @@
 package org.snakeskin.scope.client.plot
 
 import javafx.scene.canvas.Canvas
+import javafx.scene.paint.Color
 import org.snakeskin.scope.client.DrawingContext
+import org.snakeskin.scope.client.ScopeFrontend
+import org.snakeskin.scope.client.buffer.BooleanChannelBuffer
+import org.snakeskin.scope.client.buffer.NumericChannelBuffer
 import kotlin.math.ceil
 import kotlin.math.max
 
@@ -9,17 +13,78 @@ import kotlin.math.max
  * Plot with one or more associated numeric channels.
  */
 class NumericPlot: IScopePlot {
-    var min = -1.0
-    var max = 12.0
-    var numVerticalDivisions = 15 //Number of horizontal divisions in addition to the bottom and top
+    var min = -5.0
+    var max = 5.0
+    var numVerticalDivisions = 3 //Number of horizontal divisions in addition to the bottom and top
 
     override val backgroundCanvas = Canvas()
     override val plotCanvas = Canvas()
 
     private var lastContext = DrawingContext()
 
+    private val timestampBuffer = ScopeFrontend.timestampBuffer
+    private val channelBuffer by lazy { ScopeFrontend.channelBuffers[0] as NumericChannelBuffer }
+    private val boolChannelBuffer by lazy { ScopeFrontend.channelBuffers[1] as BooleanChannelBuffer }
+
+    private fun getXLocation(x: Double): Double {
+        val widthPerDivision = plotWidth / (numTimebaseDivisions + 1)
+        return (x - lastContext.timebaseFirst) / (lastContext.timebaseLast - lastContext.timebaseFirst) * (plotWidth)
+    }
+
+    private fun getYLocation(y: Double): Double {
+        return (max - y) / (max - min) * height
+    }
+
+    private fun plotPoint(t: Double, y: Double, tLast: Double, yLast: Double, color: Color) {
+        //Convert points to pixel locations
+        val widthPerDivision = plotWidth / (numTimebaseDivisions + 1)
+        val yPosPixels = (max - y) / (max - min) * height //Distance from max to point over range is a percent, multiply to get pixels
+        //Same as above, only multiplying by plot width minus one division width because the last division is fake, and also offsetting by the x offset
+        val tPosPixels = (t - lastContext.timebaseFirst) / (lastContext.timebaseLast - lastContext.timebaseFirst) * (plotWidth)
+
+        val yLastPostPixels = (max - yLast) / (max - min) * height
+        val tLastPosPixels = (tLast - lastContext.timebaseFirst) / (lastContext.timebaseLast - lastContext.timebaseFirst) * (plotWidth)
+
+        plotCanvas.graphicsContext2D.stroke = color
+        plotCanvas.graphicsContext2D.strokeLine(tLastPosPixels, yLastPostPixels, tPosPixels, yPosPixels)
+    }
+
+    var fillColor = Color(0.0, 0.5, 0.0, 0.25)
+
     override fun render(context: DrawingContext) {
         lastContext = context //Cache the context (for resize redrawing)
+
+        var boolMarker = 0.0
+        var lastBool = false
+
+        for (i in (context.firstIndex + 1)..context.lastIndex) {
+            //Render the points
+            val lastTime = timestampBuffer.arr[i - 1]
+            val lastPoint = channelBuffer.arr[i - 1]
+            val time = timestampBuffer.arr[i]
+            val point = channelBuffer.arr[i]
+
+            var boolValue = boolChannelBuffer.arr[i]
+            if (boolValue && !lastBool) {
+                boolMarker = getXLocation(time)
+            }
+
+            if (i + 1 == context.lastIndex) {
+                boolValue = false
+                lastBool = true
+            }
+
+            if (!boolValue && lastBool) {
+                //plotCanvas.graphicsContext2D.fill = fillColor
+                //plotCanvas.graphicsContext2D.fillRect(boolMarker, 0.0, getXLocation(time) - boolMarker, height)
+            }
+
+            lastBool = boolValue
+
+
+            plotPoint(time, point, lastTime, lastPoint, Color.YELLOW)
+        }
+
     }
 
     private var bgX = 0.0

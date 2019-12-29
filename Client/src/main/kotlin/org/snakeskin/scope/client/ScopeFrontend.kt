@@ -16,21 +16,21 @@ object ScopeFrontend {
     /**
      * How many points to store in the frontend buffers
      */
-    private const val FRONTEND_BUFFER_SIZE = 20
+    private const val FRONTEND_BUFFER_SIZE = 100000
 
     //Protocols and buffers
     private var protocol = ScopeProtocol(0, listOf())
-    private var incomingBuffer = ByteBuffer.allocate(protocol.sizeBytes)
+    var incomingBuffer = ByteBuffer.allocate(protocol.sizeBytes) //TODO make private!
     private var bufferPointer = 0 //Pointer used to synchronize all buffers
     val channelBuffers = arrayListOf<ChannelBuffer>()
-    private val timestampBuffer = TimestampBuffer(FRONTEND_BUFFER_SIZE)
+    val timestampBuffer = TimestampBuffer(FRONTEND_BUFFER_SIZE)
 
     //Synchronization
     private val bufferPointerLock = Any()
 
     //Frontend parameters
-    private var numTimebaseDivisions = 10
-    private var secondsPerTimebaseDivision = .01
+    private var numTimebaseDivisions = 9
+    private var secondsPerTimebaseDivision = 1.0
     private var timebaseEndIndex = Int.MAX_VALUE //MAX_VALUE means use roll graphing mode
 
     //Parameter updates
@@ -70,11 +70,13 @@ object ScopeFrontend {
         }
         synchronized(bufferPointerLock) {
             bufferPointer++ //Increment the buffer pointer
-            if (bufferPointer > FRONTEND_BUFFER_SIZE) {
-                bufferPointer = FRONTEND_BUFFER_SIZE //Do not allow the pointer to get bigger than the size
+            if (bufferPointer >= FRONTEND_BUFFER_SIZE) {
+                bufferPointer = FRONTEND_BUFFER_SIZE - 1 //Do not allow the pointer to get bigger than the size
             }
         }
     }
+
+    var testingCounter = 0
 
     /**
      * Copies parameters for drawing into the provided DrawingContext.  These parameters can then be used to safely
@@ -93,12 +95,13 @@ object ScopeFrontend {
         synchronized(bufferPointerLock) {
             latestIndex = bufferPointer - 1 //Latest data index
         }
+        if (latestIndex < 0) return //There is no data
 
         if (timebaseEndIndex == Int.MAX_VALUE) {
             //We are in roll graphing mode
             ctx.lastIndex = latestIndex //Last index is always the latest datapoint in this mode
             val latestTime = timestampBuffer.arr[latestIndex] //Get the latest timestamp
-            val firstTime = latestTime - (secondsPerTimebaseDivision * (numTimebaseDivisions - 1))
+            val firstTime = latestTime - (secondsPerTimebaseDivision * (numTimebaseDivisions + 1))
             if (firstTime > 0.0) {
                 //First time value is positive, so we will do a rolling graph from the right
                 ctx.timebaseLast = latestTime //Last division will be the latest time
@@ -106,7 +109,7 @@ object ScopeFrontend {
                 ctx.firstIndex = timestampBuffer.searchForStart(firstTime, latestIndex) //Search for first index
             } else {
                 //First time value is 0 or negative, so we will be doing a fixed graph from the left
-                ctx.timebaseLast = secondsPerTimebaseDivision * (numTimebaseDivisions - 1)
+                ctx.timebaseLast = secondsPerTimebaseDivision * (numTimebaseDivisions + 1)
                 ctx.timebaseFirst = 0.0 //We will be graphing from 0
                 ctx.firstIndex = 0 //We will be graphing all data
             }
