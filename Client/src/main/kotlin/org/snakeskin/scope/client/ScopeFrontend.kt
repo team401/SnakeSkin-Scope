@@ -35,7 +35,10 @@ object ScopeFrontend {
 
     //Parameter updates
     fun updateTimebaseNumDivisions(divisions: Int) = paramUpdate { numTimebaseDivisions = divisions }
-    fun incrementTimebaseSecondsPerDivision(incrementSeconds: Double) = paramUpdate { secondsPerTimebaseDivision += incrementSeconds }
+
+    fun incrementTimebaseSecondsPerDivision(incrementSeconds: Double) =
+        paramUpdate { secondsPerTimebaseDivision += incrementSeconds }
+
     fun updateTimebaseEndIndex(endIndex: Int) = paramUpdate { timebaseEndIndex = endIndex }
 
     /**
@@ -76,8 +79,6 @@ object ScopeFrontend {
         }
     }
 
-    var testingCounter = 0
-
     /**
      * Copies parameters for drawing into the provided DrawingContext.  These parameters can then be used to safely
      * concurrently access the incoming data buffers.
@@ -117,28 +118,5 @@ object ScopeFrontend {
             //We are in fixed graphing mode
             //TODO finish
         }
-    }
-
-    @JvmStatic
-    fun main(args: Array<String>) {
-        val fmt = DecimalFormat("#.###")
-        val ctx = DrawingContext()
-
-        val channel = ScopeChannelNumeric("Test")
-        val protoLocal = ScopeProtocol(5800, listOf(channel))
-
-        acceptProtocol(ScopeProtocol.deserializeProtocol(protoLocal.serializeProtocol()))
-
-        for (i in 0..11) {
-            channel.update(i.toDouble())
-            protoLocal.populateBuffer(i * .01, incomingBuffer)
-            acceptData()
-        }
-
-        updateDraw(ctx)
-        println(fmt.format(ctx.timebaseFirst))
-        println(fmt.format(ctx.timebaseLast))
-        println(ctx.firstIndex)
-        println(ctx.lastIndex)
     }
 }

@@ -1,11 +1,18 @@
 package org.snakeskin.scope.client.plot
 
+import javafx.beans.InvalidationListener
+import javafx.geometry.Insets
+import javafx.geometry.Pos
 import javafx.scene.canvas.Canvas
+import javafx.scene.control.Label
+import javafx.scene.control.Spinner
+import javafx.scene.layout.*
 import javafx.scene.paint.Color
 import org.snakeskin.scope.client.DrawingContext
 import org.snakeskin.scope.client.ScopeFrontend
 import org.snakeskin.scope.client.buffer.BooleanChannelBuffer
 import org.snakeskin.scope.client.buffer.NumericChannelBuffer
+import org.snakeskin.scope.client.util.NumericTextField
 import kotlin.math.ceil
 import kotlin.math.max
 
@@ -13,18 +20,79 @@ import kotlin.math.max
  * Plot with one or more associated numeric channels.
  */
 class NumericPlot: IScopePlot {
-    var min = -5.0
-    var max = 5.0
+    companion object {
+        private val controlMargins = Insets(0.0, 10.0, 0.0, 10.0)
+        private val controlHboxPadding = Insets(0.0, 10.0, 10.0, 10.0)
+        private val channelsVboxPadding = Insets(10.0, 10.0, 10.0, 10.0)
+        private val controlLabelPadding = Insets(5.0, 0.0, 0.0, 0.0)
+    }
+
+    var min = -20.0
+    var max = 20.0
     var numVerticalDivisions = 3 //Number of horizontal divisions in addition to the bottom and top
+
+    /**
+     * Control pane for a numeric plot
+     */
+    inner class ControlPane: BorderPane() {
+        private val minField = NumericTextField(min)
+        private val maxField = NumericTextField(max)
+        private val divsSpinner = Spinner<Int>(0, Int.MAX_VALUE, numVerticalDivisions)
+
+        private val channelsVbox = VBox()
+        private val controlsHbox = HBox(
+            Label("Min:").apply { padding = controlLabelPadding },
+            minField,
+            Label("Max:").apply { padding = controlLabelPadding },
+            maxField,
+            Label("Divs:").apply { padding = controlLabelPadding },
+            divsSpinner
+        )
+
+
+
+        init {
+            minField.prefWidth = 50.0
+            maxField.prefWidth = 50.0
+            divsSpinner.prefWidth = 50.0
+
+            HBox.setMargin(minField, controlMargins)
+            HBox.setMargin(maxField, controlMargins)
+            HBox.setMargin(divsSpinner, controlMargins)
+
+            controlsHbox.padding = controlHboxPadding
+
+            bottom = controlsHbox
+
+            minField.numberProperty().addListener { _, _, newValue ->
+                min = newValue.toDouble()
+                clearBackground()
+                drawBackgroundCached()
+            }
+
+            maxField.numberProperty().addListener { _, _, newValue ->
+                max = newValue.toDouble()
+                clearBackground()
+                drawBackgroundCached()
+            }
+
+            divsSpinner.valueProperty().addListener { _, _, newValue ->
+                numVerticalDivisions = newValue
+                clearBackground()
+                drawBackgroundCached()
+            }
+        }
+    }
 
     override val backgroundCanvas = Canvas()
     override val plotCanvas = Canvas()
+
+    override val controlPane = ControlPane()
 
     private var lastContext = DrawingContext()
 
     private val timestampBuffer = ScopeFrontend.timestampBuffer
     private val channelBuffer by lazy { ScopeFrontend.channelBuffers[0] as NumericChannelBuffer }
-    private val boolChannelBuffer by lazy { ScopeFrontend.channelBuffers[1] as BooleanChannelBuffer }
 
     private fun getXLocation(x: Double): Double {
         val widthPerDivision = plotWidth / (numTimebaseDivisions + 1)
@@ -51,11 +119,12 @@ class NumericPlot: IScopePlot {
 
     var fillColor = Color(0.0, 0.5, 0.0, 0.25)
 
+    override fun updateSettings() {
+
+    }
+
     override fun render(context: DrawingContext) {
         lastContext = context //Cache the context (for resize redrawing)
-
-        var boolMarker = 0.0
-        var lastBool = false
 
         for (i in (context.firstIndex + 1)..context.lastIndex) {
             //Render the points
@@ -63,25 +132,6 @@ class NumericPlot: IScopePlot {
             val lastPoint = channelBuffer.arr[i - 1]
             val time = timestampBuffer.arr[i]
             val point = channelBuffer.arr[i]
-
-            var boolValue = boolChannelBuffer.arr[i]
-            if (boolValue && !lastBool) {
-                boolMarker = getXLocation(time)
-            }
-
-            if (i + 1 == context.lastIndex) {
-                boolValue = false
-                lastBool = true
-            }
-
-            if (!boolValue && lastBool) {
-                //plotCanvas.graphicsContext2D.fill = fillColor
-                //plotCanvas.graphicsContext2D.fillRect(boolMarker, 0.0, getXLocation(time) - boolMarker, height)
-            }
-
-            lastBool = boolValue
-
-
             plotPoint(time, point, lastTime, lastPoint, Color.YELLOW)
         }
 

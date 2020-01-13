@@ -1,6 +1,7 @@
 package org.snakeskin.scope.client.plot
 
 import javafx.scene.canvas.Canvas
+import javafx.scene.layout.Pane
 import org.snakeskin.scope.client.DrawingContext
 
 /**
@@ -34,6 +35,11 @@ interface IScopePlot {
     fun clearForeground()
 
     /**
+     * Reads and updates all settings for the plot
+     */
+    fun updateSettings()
+
+    /**
      * Canvas for the background of the plot.  This includes the outline, divisions, and vertical axis labels
      */
     val backgroundCanvas: Canvas
@@ -42,4 +48,9 @@ interface IScopePlot {
      * Canvas for the plot itself.  This is where the actual trace is drawn.
      */
     val plotCanvas: Canvas
+
+    /**
+     * Control pane for the plot.  This pane is displayed on the righthand side of the screen.
+     */
+    val controlPane: Pane
 }

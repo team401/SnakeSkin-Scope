@@ -13,19 +13,16 @@ import java.nio.channels.DatagramChannel
  *
  * The default data server port is 4010, and the default header server port is 4011
  *
- * This class implements the "Runnable" interface to make it easy to update periodically with Java's built in
- * executor framework, threads, or any other periodic loop executor.
- *
  * Please note that this class automatically creates one thread per client connected to maintain the connection.
  */
-abstract class ScopeServer(val timesource: IScopeTimeSource, val dataServerPort: Int = 4010, val headerServerPort: Int = 4011): Runnable {
+abstract class ScopeServer(val dataServerPort: Int = 4010, val headerServerPort: Int = 4011) {
     protected val channels = ScopeRegistrationContext()
 
     /**
      * Method to update your channels.  Use the channel objects you stored from the "registerChannels" function
      * to sequentially update the value on each channel.
      */
-    abstract fun updateChannels()
+    protected abstract fun updateChannels()
 
     private lateinit var protocol: ScopeProtocol
     private lateinit var writeBuffer: ByteBuffer
@@ -46,9 +43,10 @@ abstract class ScopeServer(val timesource: IScopeTimeSource, val dataServerPort:
      * Call this method periodically to send out new scope values to the client.  The more often this method is called,
      * the more data will be sent to the client.  For best results, it is recommended to call this function at a fixed rate
      * so that the data will be evenly spaced on the plot.
+     *
+     * @param now The current relative system timestamp in seconds
      */
-    override fun run() {
-        val now = timesource.getTimeNow() //Get the current time
+    fun run(now: Double) {
         updateChannels() //Update all channel values //TODO maybe optimize so this directly writes to the buffer?
         protocol.populateBuffer(now, writeBuffer) //Fill the write buffer with the data
         val clients = headerServer.getClients()
@@ -56,36 +54,5 @@ abstract class ScopeServer(val timesource: IScopeTimeSource, val dataServerPort:
             writeBuffer.rewind()
             datagramChannel.send(writeBuffer, it.dataSocketAddress) //Send the buffer to the client
         }
-    }
-}
-
-fun main() {
-    val ts = object : IScopeTimeSource {
-        override fun getTimeNow(): Double {
-            return System.nanoTime() * 1e-9
-        }
-    }
-
-    val server = object : ScopeServer(ts) {
-        val channel1 = channels.registerNumeric("Test Channel 1")
-        val channel2 = channels.registerBoolean("Test Channel 2")
-
-
-        var lastDouble = 0.0
-        var lastBool = false
-
-        override fun updateChannels() {
-            channel1.update(lastDouble)
-            channel2.update(lastBool)
-
-            lastDouble += 1.0
-            lastBool = !lastBool
-        }
-    }
-
-
-    while (true) {
-        server.run()
-        Thread.sleep(10)
     }
 }

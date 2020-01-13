@@ -9,6 +9,7 @@ import org.snakeskin.scope.client.DrawingContext
 
 class TimebaseCanvas: Canvas() {
     private var curCtx = DrawingContext()
+    private var hasPlots = false
     private var plotStart = 0.0
     private var plotWidth = 0.0
 
@@ -29,14 +30,25 @@ class TimebaseCanvas: Canvas() {
         graphicsContext2D.clearRect(0.0, 0.0, width, height)
     }
 
-    fun redraw(ctx: DrawingContext) {
+    fun redraw(ctx: DrawingContext, hasPlots: Boolean) {
         curCtx = ctx
+        this.hasPlots = hasPlots
         clear()
         redrawCached()
     }
 
     private fun redrawCached() {
         val gc = graphicsContext2D
+
+        if (!hasPlots) {
+            gc.fill = Color.WHITE
+            gc.font = Font.font(24.0)
+            gc.textBaseline = VPos.CENTER
+            gc.textAlign = TextAlignment.CENTER
+            gc.fillText("No plots configured.", width / 2.0, height / 2.0)
+            return //Do not draw the timebase if there are no plots added
+        }
+
         val widthPerDivision = plotWidth / (curCtx.numTimebaseDivisions + 1)
 
         //Draw lines coming off of each timebase division

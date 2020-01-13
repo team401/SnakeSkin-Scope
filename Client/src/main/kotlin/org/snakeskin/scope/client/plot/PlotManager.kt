@@ -1,6 +1,7 @@
 package org.snakeskin.scope.client.plot
 
 import javafx.animation.AnimationTimer
+import javafx.beans.InvalidationListener
 import javafx.collections.FXCollections
 import javafx.collections.ListChangeListener
 import javafx.collections.ObservableList
@@ -11,6 +12,7 @@ import javafx.scene.layout.*
 import javafx.scene.paint.Color
 import org.snakeskin.scope.client.DRAW_LOCK
 import org.snakeskin.scope.client.DrawingContext
+import org.snakeskin.scope.client.ScopeClient
 import org.snakeskin.scope.client.ScopeFrontend
 
 /**
@@ -41,7 +43,7 @@ object PlotManager: AnimationTimer() {
     private var resizeWidth = 0.0
     private var resizeHeight = 0.0
 
-    private val timebaseCanvas = TimebaseCanvas() //Canvas for drawing the canvas
+    private val timebaseCanvas = TimebaseCanvas() //Canvas for drawing the timebase
 
     private var lastNumTimebaseDivisions = 0 //Used to decide whether to relocate when the number of divisions changes
 
@@ -74,6 +76,16 @@ object PlotManager: AnimationTimer() {
         //When a plot is removed, its canvases need to be removed from the children of the root StackPane
         root.children.removeAll(plot.backgroundCanvas, plot.plotCanvas)
         needsRelocate = true //Mark for relocation
+        DRAW_LOCK.unlock()
+    }
+
+    /**
+     * Removes a plot via the reference of the control frame
+     */
+    fun removeFromControlPane(pane: PlotControlPaneWrapper) {
+        DRAW_LOCK.lock()
+        val plot = plots.first { it.controlPane == pane.controlPane }
+        removePlot(plot)
         DRAW_LOCK.unlock()
     }
 
@@ -124,7 +136,9 @@ object PlotManager: AnimationTimer() {
      */
     override fun handle(now: Long) {
         DRAW_LOCK.lock() //Acquire the draw lock
-        ScopeFrontend.updateDraw(ctx)
+        ScopeFrontend.updateDraw(ctx) //Get latest values from the frontend
+
+        val numPlots = plots.size
 
         if (ctx.numTimebaseDivisions != lastNumTimebaseDivisions) {
             lastNumTimebaseDivisions = ctx.numTimebaseDivisions
@@ -145,7 +159,7 @@ object PlotManager: AnimationTimer() {
         }
 
         //Update timebase
-        timebaseCanvas.redraw(ctx)
+        timebaseCanvas.redraw(ctx, numPlots > 0)
 
         //Render each plot
         plots.forEach {
