@@ -2,7 +2,6 @@ package org.snakeskin.scope.client.plot
 
 import javafx.scene.canvas.Canvas
 import javafx.scene.layout.Pane
-import org.snakeskin.scope.client.DrawingContext
 
 /**
  * Interface for a general scope plot
@@ -11,7 +10,7 @@ interface IScopePlot {
     /**
      * Render the plot given the drawing context
      */
-    fun render(context: DrawingContext)
+    fun render(context: PlotDrawingContext)
 
     /**
      * Draws the background of the plot

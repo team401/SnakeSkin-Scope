@@ -5,10 +5,9 @@ import javafx.scene.canvas.Canvas
 import javafx.scene.paint.Color
 import javafx.scene.text.Font
 import javafx.scene.text.TextAlignment
-import org.snakeskin.scope.client.DrawingContext
 
-class TimebaseCanvas: Canvas() {
-    private var curCtx = DrawingContext()
+class PlotTimebaseCanvas: Canvas() {
+    private var curCtx = PlotDrawingContext()
     private var hasPlots = false
     private var plotStart = 0.0
     private var plotWidth = 0.0
@@ -30,7 +29,7 @@ class TimebaseCanvas: Canvas() {
         graphicsContext2D.clearRect(0.0, 0.0, width, height)
     }
 
-    fun redraw(ctx: DrawingContext, hasPlots: Boolean) {
+    fun redraw(ctx: PlotDrawingContext, hasPlots: Boolean) {
         curCtx = ctx
         this.hasPlots = hasPlots
         clear()

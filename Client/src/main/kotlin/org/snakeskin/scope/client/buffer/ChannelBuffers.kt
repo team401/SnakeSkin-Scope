@@ -5,9 +5,6 @@ import org.snakeskin.scope.protocol.channel.ScopeChannelBoolean
 import org.snakeskin.scope.protocol.channel.ScopeChannelNumeric
 import org.snakeskin.scope.protocol.channel.ScopeChannelPose
 
-/**
- * @param D The type of draw buffer associated with this type of channel buffer
- */
 sealed class ChannelBuffer {
     abstract val size: Int
     abstract fun reset()

@@ -23,8 +23,8 @@ object ScopeLayoutManager {
     private lateinit var mainControls: AnchorPane
     private lateinit var plotControls: AnchorPane
 
-    val minWidth = 640.0 + rightControlGutterSize
-    val minHeight = 480.0 + bottomControlGutterSize
+    const val minWidth = 640.0 + rightControlGutterSize
+    const val minHeight = 480.0 + bottomControlGutterSize
 
     private object Listener: InvalidationListener {
         override fun invalidated(observable: Observable?) {
@@ -49,6 +49,7 @@ object ScopeLayoutManager {
                 timebaseControls.minHeight = timebaseControlsHeight
                 timebaseControls.translateX = timebaseControlsX
                 timebaseControls.translateY = timebaseControlsY
+                timebaseControls.resize(timebaseControlsWidth, timebaseControlsHeight)
 
                 val mainControlsX = width - rightControlGutterSize
                 val mainControlsY = height - bottomControlGutterSize

@@ -1,6 +1,7 @@
 package org.snakeskin.scope.client
 
 import javafx.application.Application
+import javafx.application.Platform
 import javafx.beans.InvalidationListener
 import javafx.fxml.FXMLLoader
 import javafx.scene.Scene
@@ -8,10 +9,14 @@ import javafx.scene.image.Image
 import javafx.scene.layout.*
 import javafx.stage.Stage
 import org.snakeskin.scope.client.plot.PlotManager
+import org.snakeskin.scope.client.timebase.TimebaseBackgroundCanvas
+import org.snakeskin.scope.client.timebase.TimebaseDrawingContext
+import org.snakeskin.scope.client.timebase.TimebaseManager
 import org.snakeskin.scope.protocol.ScopeProtocol
 import org.snakeskin.scope.protocol.channel.ScopeChannelBoolean
 import org.snakeskin.scope.protocol.channel.ScopeChannelNumeric
 import kotlin.math.sin
+import kotlin.math.tan
 
 class ScopeClient: Application() {
     companion object {
@@ -48,11 +53,21 @@ class ScopeClient: Application() {
 
         Thread {
             while (true) {
-                channel.update(sin(count))
+                channel.update(sin(count * 5.0) + (Math.random() / 5.0))
                 protoLocal.populateBuffer(count, ScopeFrontend.incomingBuffer)
                 ScopeFrontend.acceptData()
                 count += .01
                 Thread.sleep(10)
+
+                if (count >= 10.0) {
+                    Platform.runLater {
+                        val ctx = TimebaseDrawingContext()
+                        ScopeFrontend.updateTimebase(ctx)
+                        PlotManager.updateTimebase(ctx)
+                        TimebaseManager.backgroundCanvas.clear()
+                        TimebaseManager.backgroundCanvas.redraw(ctx)
+                    }
+                }
             }
         }.apply { isDaemon = true }.start()
 

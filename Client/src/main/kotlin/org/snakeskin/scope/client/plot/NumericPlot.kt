@@ -1,18 +1,15 @@
 package org.snakeskin.scope.client.plot
 
-import javafx.beans.InvalidationListener
 import javafx.geometry.Insets
-import javafx.geometry.Pos
 import javafx.scene.canvas.Canvas
 import javafx.scene.control.Label
 import javafx.scene.control.Spinner
 import javafx.scene.layout.*
 import javafx.scene.paint.Color
-import org.snakeskin.scope.client.DrawingContext
 import org.snakeskin.scope.client.ScopeFrontend
-import org.snakeskin.scope.client.buffer.BooleanChannelBuffer
 import org.snakeskin.scope.client.buffer.NumericChannelBuffer
 import org.snakeskin.scope.client.util.NumericTextField
+import org.snakeskin.scope.protocol.channel.ScopeChannelNumeric
 import kotlin.math.ceil
 import kotlin.math.max
 
@@ -30,6 +27,15 @@ class NumericPlot: IScopePlot {
     var min = -20.0
     var max = 20.0
     var numVerticalDivisions = 3 //Number of horizontal divisions in addition to the bottom and top
+
+    /**
+     * Active channel indices.  It is assumed that these indices correspond with a numeric channel type
+     */
+    val channelIndices = arrayListOf<Pair<Int, Color>>()
+
+    init {
+        channelIndices.add(0 to Color.YELLOW)
+    }
 
     /**
      * Control pane for a numeric plot
@@ -89,7 +95,7 @@ class NumericPlot: IScopePlot {
 
     override val controlPane = ControlPane()
 
-    private var lastContext = DrawingContext()
+    private var lastContext = PlotDrawingContext()
 
     private val timestampBuffer = ScopeFrontend.timestampBuffer
     private val channelBuffer by lazy { ScopeFrontend.channelBuffers[0] as NumericChannelBuffer }
@@ -123,7 +129,7 @@ class NumericPlot: IScopePlot {
 
     }
 
-    override fun render(context: DrawingContext) {
+    override fun render(context: PlotDrawingContext) {
         lastContext = context //Cache the context (for resize redrawing)
 
         for (i in (context.firstIndex + 1)..context.lastIndex) {

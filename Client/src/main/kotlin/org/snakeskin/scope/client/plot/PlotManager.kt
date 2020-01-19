@@ -1,19 +1,15 @@
 package org.snakeskin.scope.client.plot
 
 import javafx.animation.AnimationTimer
-import javafx.beans.InvalidationListener
 import javafx.collections.FXCollections
-import javafx.collections.ListChangeListener
 import javafx.collections.ObservableList
 import javafx.geometry.Insets
 import javafx.geometry.Pos
-import javafx.scene.canvas.Canvas
 import javafx.scene.layout.*
 import javafx.scene.paint.Color
 import org.snakeskin.scope.client.DRAW_LOCK
-import org.snakeskin.scope.client.DrawingContext
-import org.snakeskin.scope.client.ScopeClient
 import org.snakeskin.scope.client.ScopeFrontend
+import org.snakeskin.scope.client.timebase.TimebaseDrawingContext
 
 /**
  * Manages and renders active plots
@@ -35,7 +31,7 @@ object PlotManager: AnimationTimer() {
     val plots: ObservableList<IScopePlot> = FXCollections.observableArrayList<IScopePlot>()
     val root = StackPane()
 
-    private val ctx = DrawingContext()
+    private val ctx = PlotDrawingContext()
 
     private var needsRelocate = false //Flag for if relocation is required
     private var needsResize = false //Flag for if resizing is required
@@ -43,7 +39,7 @@ object PlotManager: AnimationTimer() {
     private var resizeWidth = 0.0
     private var resizeHeight = 0.0
 
-    private val timebaseCanvas = TimebaseCanvas() //Canvas for drawing the timebase
+    private val timebaseCanvas = PlotTimebaseCanvas() //Canvas for drawing the timebase
 
     private var lastNumTimebaseDivisions = 0 //Used to decide whether to relocate when the number of divisions changes
 
@@ -129,6 +125,22 @@ object PlotManager: AnimationTimer() {
 
         timebaseCanvas.clear()
         timebaseCanvas.relocateRedraw(timebaseOriginY, viewportWidth, timebaseHeight, plotOriginX, usableWidth)
+    }
+
+    /**
+     * Updates the provided timebase context the active channels
+     */
+    fun updateTimebase(ctx: TimebaseDrawingContext) {
+        DRAW_LOCK.lock()
+        ctx.activeChannels.clear()
+        plots.forEach {
+            val subList = arrayListOf<Pair<Int, Color>>()
+            when (it) {
+                is NumericPlot -> subList.addAll(it.channelIndices)
+            }
+            ctx.activeChannels.add(subList)
+        }
+        DRAW_LOCK.unlock()
     }
 
     /**

@@ -1,11 +1,11 @@
-package org.snakeskin.scope.client
+package org.snakeskin.scope.client.plot
 
 import org.snakeskin.scope.client.buffer.TimestampBuffer
 
 /**
  * Drawing context class.  Gets populated by the frontend before drawing
  */
-class DrawingContext {
+class PlotDrawingContext {
     /**
      * First index of data to draw
      */

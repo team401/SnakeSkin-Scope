@@ -1,12 +1,10 @@
 package org.snakeskin.scope.client
 
 import org.snakeskin.scope.client.buffer.*
+import org.snakeskin.scope.client.plot.PlotDrawingContext
+import org.snakeskin.scope.client.timebase.TimebaseDrawingContext
 import org.snakeskin.scope.protocol.ScopeProtocol
-import org.snakeskin.scope.protocol.channel.ScopeChannelNumeric
 import java.nio.ByteBuffer
-import java.text.DecimalFormat
-import java.util.concurrent.Executors
-import java.util.concurrent.locks.ReentrantLock
 
 /**
  * Global frontend for the scope.  Manages all the logic for the scope, and collects all data.  Also controls
@@ -30,16 +28,8 @@ object ScopeFrontend {
 
     //Frontend parameters
     private var numTimebaseDivisions = 9
-    private var secondsPerTimebaseDivision = 1.0
+    private var secondsPerTimebaseDivision = 0.1
     private var timebaseEndIndex = Int.MAX_VALUE //MAX_VALUE means use roll graphing mode
-
-    //Parameter updates
-    fun updateTimebaseNumDivisions(divisions: Int) = paramUpdate { numTimebaseDivisions = divisions }
-
-    fun incrementTimebaseSecondsPerDivision(incrementSeconds: Double) =
-        paramUpdate { secondsPerTimebaseDivision += incrementSeconds }
-
-    fun updateTimebaseEndIndex(endIndex: Int) = paramUpdate { timebaseEndIndex = endIndex }
 
     /**
      * Accepts a new protocol into the frontend.  This should be called whenever a new protocol is received from
@@ -80,12 +70,25 @@ object ScopeFrontend {
     }
 
     /**
+     * Copies parameters for drawing the timebase into the provided DrawingContext.  These parameters can then be used
+     * to draw the timebase slider background on the plot
+     */
+    fun updateTimebase(ctx: TimebaseDrawingContext) {
+        val latestIndex: Int
+        synchronized(bufferPointerLock) {
+            latestIndex = bufferPointer - 1 //Latest data index
+        }
+
+        ctx.lastDataIndex = latestIndex
+    }
+
+    /**
      * Copies parameters for drawing into the provided DrawingContext.  These parameters can then be used to safely
      * concurrently access the incoming data buffers.
      *
      * This function must be called while in possession of the draw lock
      */
-    fun updateDraw(ctx: DrawingContext) {
+    fun updateDraw(ctx: PlotDrawingContext) {
         ctx.numTimebaseDivisions = numTimebaseDivisions
         ctx.timebaseSecondsPerDivision = secondsPerTimebaseDivision
 

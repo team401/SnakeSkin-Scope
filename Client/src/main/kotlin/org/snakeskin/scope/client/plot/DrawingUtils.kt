@@ -11,6 +11,30 @@ import java.text.DecimalFormat
  * Utilities for drawing on a canvas
  */
 object DrawingUtils {
+    object PixelMath {
+        /**
+         * Calculates a pixel location for a given x value
+         * @param xCoord The coordinate to solve for
+         * @param xMin The first x value on the scale
+         * @param xMax The last x value on the scale
+         * @param width The width of the container in pixels
+         */
+        fun calcX(xCoord: Double, xMin: Double, xMax: Double, width: Double): Double {
+            return (xCoord - xMin) / (xMax - xMin) * width
+        }
+
+        /**
+         * Calculates a pixel location for a given y value
+         * @param yCoord The coordinate to solve for
+         * @param yMin The first x value on the scale
+         * @param yMax The last x value on the scale
+         * @param height The width of the container in pixels
+         */
+        fun calcY(yCoord: Double, yMin: Double, yMax: Double, height: Double): Double {
+            return (yMax - yCoord) / (yMax - yMin) * height
+        }
+    }
+
     val timmebaseNumberFormatter = DecimalFormat("#0.000")
 
     //Fix 3 decimal places, allow up to 12 decimal places
