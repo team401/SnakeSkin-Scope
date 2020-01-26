@@ -47,6 +47,8 @@ object ScopeLayoutManager {
                 val timebaseControlsHeight = bottomControlGutterSize
                 timebaseControls.minWidth = timebaseControlsWidth
                 timebaseControls.minHeight = timebaseControlsHeight
+                timebaseControls.maxWidth = timebaseControlsWidth
+                timebaseControls.maxHeight = timebaseControlsHeight
                 timebaseControls.translateX = timebaseControlsX
                 timebaseControls.translateY = timebaseControlsY
                 timebaseControls.resize(timebaseControlsWidth, timebaseControlsHeight)
@@ -57,8 +59,11 @@ object ScopeLayoutManager {
                 val mainControlsHeight = bottomControlGutterSize
                 mainControls.minWidth = mainControlsWidth
                 mainControls.minHeight = mainControlsHeight
+                mainControls.maxWidth = mainControlsWidth
+                mainControls.maxHeight = mainControlsHeight
                 mainControls.translateX = mainControlsX
                 mainControls.translateY = mainControlsY
+                mainControls.resize(mainControlsWidth, mainControlsHeight)
 
                 val plotControlsX = width - rightControlGutterSize
                 val plotControlsY = 0.0
@@ -66,8 +71,11 @@ object ScopeLayoutManager {
                 val plotControlsHeight = height - bottomControlGutterSize
                 plotControls.minWidth = plotControlsWidth
                 plotControls.minHeight = plotControlsHeight
+                plotControls.maxWidth = plotControlsWidth
+                plotControls.maxHeight = plotControlsHeight
                 plotControls.translateX = plotControlsX
                 plotControls.translateY = plotControlsY
+                plotControls.resize(plotControlsWidth, plotControlsHeight)
             }
         }
     }

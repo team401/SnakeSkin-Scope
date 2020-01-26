@@ -60,8 +60,6 @@ class TimebaseBackgroundCanvas: Canvas() {
         val tArr = ScopeFrontend.timestampBuffer.arr
         val tLast = tArr[curCtx.lastDataIndex] //Get the last timestamp
 
-        val idxPerPoint = curCtx.lastDataIndex / usableWidth
-
         curCtx.activeChannels.forEach {
             plot ->
             //Draw each channel on the plot

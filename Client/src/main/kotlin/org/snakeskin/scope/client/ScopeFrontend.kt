@@ -5,6 +5,7 @@ import org.snakeskin.scope.client.plot.PlotDrawingContext
 import org.snakeskin.scope.client.timebase.TimebaseDrawingContext
 import org.snakeskin.scope.protocol.ScopeProtocol
 import java.nio.ByteBuffer
+import kotlin.math.min
 
 /**
  * Global frontend for the scope.  Manages all the logic for the scope, and collects all data.  Also controls
@@ -30,6 +31,15 @@ object ScopeFrontend {
     private var numTimebaseDivisions = 9
     private var secondsPerTimebaseDivision = 0.1
     private var timebaseEndIndex = Int.MAX_VALUE //MAX_VALUE means use roll graphing mode
+    @Synchronized get
+    @Synchronized set
+
+    /**
+     * Returns true if the scope is running, false otherwise.
+     */
+    fun isRunning(): Boolean {
+        return timebaseEndIndex == Int.MAX_VALUE
+    }
 
     /**
      * Accepts a new protocol into the frontend.  This should be called whenever a new protocol is received from
@@ -70,6 +80,22 @@ object ScopeFrontend {
     }
 
     /**
+     * Starts data acquisition of the scope
+     */
+    fun startAcquisition() {
+        timebaseEndIndex = Int.MAX_VALUE //Start the scope
+    }
+
+    /**
+     * Stops data acquisition of the scope
+     */
+    fun stopAcquisition() {
+        synchronized(bufferPointerLock) {
+            timebaseEndIndex = bufferPointer - 1
+        }
+    }
+
+    /**
      * Copies parameters for drawing the timebase into the provided DrawingContext.  These parameters can then be used
      * to draw the timebase slider background on the plot
      */
@@ -80,6 +106,7 @@ object ScopeFrontend {
         }
 
         ctx.lastDataIndex = latestIndex
+        ctx.running = timebaseEndIndex == Int.MAX_VALUE
     }
 
     /**
@@ -99,27 +126,28 @@ object ScopeFrontend {
         synchronized(bufferPointerLock) {
             latestIndex = bufferPointer - 1 //Latest data index
         }
-        if (latestIndex < 0) return //There is no data
 
-        if (timebaseEndIndex == Int.MAX_VALUE) {
-            //We are in roll graphing mode
-            ctx.lastIndex = latestIndex //Last index is always the latest datapoint in this mode
-            val latestTime = timestampBuffer.arr[latestIndex] //Get the latest timestamp
-            val firstTime = latestTime - (secondsPerTimebaseDivision * (numTimebaseDivisions + 1))
-            if (firstTime > 0.0) {
-                //First time value is positive, so we will do a rolling graph from the right
-                ctx.timebaseLast = latestTime //Last division will be the latest time
-                ctx.timebaseFirst = firstTime //Last division will be the first time
-                ctx.firstIndex = timestampBuffer.searchForStart(firstTime, latestIndex) //Search for first index
-            } else {
-                //First time value is 0 or negative, so we will be doing a fixed graph from the left
-                ctx.timebaseLast = secondsPerTimebaseDivision * (numTimebaseDivisions + 1)
-                ctx.timebaseFirst = 0.0 //We will be graphing from 0
-                ctx.firstIndex = 0 //We will be graphing all data
-            }
+        val lastIndex = if (timebaseEndIndex == Int.MAX_VALUE) {
+            latestIndex
         } else {
-            //We are in fixed graphing mode
-            //TODO finish
+            min(latestIndex, timebaseEndIndex)
+        }
+        if (lastIndex <= 0) return //There is no data
+
+        //We are in roll graphing mode
+        ctx.lastIndex = lastIndex //Last index is always the latest datapoint in this mode
+        val latestTime = timestampBuffer.arr[lastIndex] //Get the latest timestamp
+        val firstTime = latestTime - (secondsPerTimebaseDivision * (numTimebaseDivisions + 1))
+        if (firstTime > 0.0) {
+            //First time value is positive, so we will do a rolling graph from the right
+            ctx.timebaseLast = latestTime //Last division will be the latest time
+            ctx.timebaseFirst = firstTime //Last division will be the first time
+            ctx.firstIndex = timestampBuffer.searchForStart(firstTime, lastIndex) //Search for first index
+        } else {
+            //First time value is 0 or negative, so we will be doing a fixed graph from the left
+            ctx.timebaseLast = secondsPerTimebaseDivision * (numTimebaseDivisions + 1)
+            ctx.timebaseFirst = 0.0 //We will be graphing from 0
+            ctx.firstIndex = 0 //We will be graphing all data
         }
     }
 }
